@@ -34,9 +34,8 @@ export default function Settings() {
   const [indexPct, setIndexPct] = useState('');
   const [indexMsg, setIndexMsg] = useState('');
 
-  // New item forms
   const [newRole, setNewRole] = useState({ name:'', hourlyRate:'' });
-  const [newGroup, setNewGroup] = useState({ name:'' });
+  const [newGroup, setNewGroup] = useState({ name:'', duration:'' });
   const [newPM, setNewPM] = useState({ name:'', commission:'' });
 
   const load = () => Promise.all([api.getRoles(), api.getServiceGroups(), api.getPaymentMethods()])
@@ -67,13 +66,13 @@ export default function Settings() {
   // Groups
   const addGroup = async () => {
     if (!newGroup.name) return;
-    const g = await api.createServiceGroup({ name: newGroup.name, sortOrder: groups.length });
+    const g = await api.createServiceGroup({ name: newGroup.name, sortOrder: groups.length, duration: newGroup.duration });
     setGroups(prev => [...prev, g]);
-    setNewGroup({ name:'' });
+    setNewGroup({ name:'', duration:'' });
   };
-  const updateGroup = async (id, name) => {
+  const updateGroup = async (id, field, value) => {
     const g = groups.find(x => x.id === id);
-    const result = await api.updateServiceGroup(id, { name, sortOrder: g.sortOrder });
+    const result = await api.updateServiceGroup(id, { ...g, [field]: value });
     setGroups(prev => prev.map(x => x.id === id ? result : x));
   };
   const deleteGroup = async (id) => {
@@ -192,6 +191,7 @@ export default function Settings() {
               <thead>
                 <tr>
                   <th>Group Name</th>
+                  <th>Duration</th>
                   <th>Order</th>
                   <th style={{width:40}}></th>
                 </tr>
@@ -200,7 +200,10 @@ export default function Settings() {
                 {groups.map((g, idx) => (
                   <tr key={g.id}>
                     <td>
-                      <InlineEdit value={g.name} onSave={v => updateGroup(g.id, v)} placeholder="Group name" />
+                      <InlineEdit value={g.name} onSave={v => updateGroup(g.id, 'name', v)} placeholder="Group name" />
+                    </td>
+                    <td>
+                      <InlineEdit value={g.duration || ''} onSave={v => updateGroup(g.id, 'duration', v)} placeholder="e.g. ~2 weeks" />
                     </td>
                     <td className="text-muted text-sm">{idx + 1}</td>
                     <td>
@@ -211,8 +214,10 @@ export default function Settings() {
               </tbody>
             </table>
             <div style={{padding:'12px 16px',borderTop:'1px solid var(--gray-100)',display:'flex',gap:8}}>
-              <input value={newGroup.name} onChange={e=>setNewGroup({name:e.target.value})}
-                placeholder="Group name" style={{flex:1}} onKeyDown={e=>e.key==='Enter'&&addGroup()} />
+              <input value={newGroup.name} onChange={e=>setNewGroup(f=>({...f,name:e.target.value}))}
+                placeholder="Group name" style={{flex:2}} onKeyDown={e=>e.key==='Enter'&&addGroup()} />
+              <input value={newGroup.duration} onChange={e=>setNewGroup(f=>({...f,duration:e.target.value}))}
+                placeholder="Duration" style={{flex:1}} onKeyDown={e=>e.key==='Enter'&&addGroup()} />
               <button className="btn btn-primary btn-sm" onClick={addGroup}>Add</button>
             </div>
           </Section>

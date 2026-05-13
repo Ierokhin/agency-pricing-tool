@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-// Railway persistent volume support: set DATA_DIR env variable to use volume
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -36,12 +35,9 @@ function nextId(data, table) {
   return data._counters[table];
 }
 
-// CRUD helpers
 const db = {
   // ROLES
-  getRoles() {
-    return loadDB().roles;
-  },
+  getRoles() { return loadDB().roles; },
   createRole(name, hourlyRate) {
     const data = loadDB();
     const role = { id: nextId(data, 'roles'), name, hourlyRate: parseFloat(hourlyRate), createdAt: new Date().toISOString() };
@@ -63,22 +59,20 @@ const db = {
     saveDB(data);
   },
 
-  // SERVICE GROUPS
-  getServiceGroups() {
-    return loadDB().serviceGroups;
-  },
-  createServiceGroup(name, sortOrder) {
+  // SERVICE GROUPS (with duration)
+  getServiceGroups() { return loadDB().serviceGroups; },
+  createServiceGroup(name, sortOrder, duration) {
     const data = loadDB();
-    const group = { id: nextId(data, 'serviceGroups'), name, sortOrder: sortOrder || 0 };
+    const group = { id: nextId(data, 'serviceGroups'), name, sortOrder: sortOrder || 0, duration: duration || '' };
     data.serviceGroups.push(group);
     saveDB(data);
     return group;
   },
-  updateServiceGroup(id, name, sortOrder) {
+  updateServiceGroup(id, fields) {
     const data = loadDB();
     const idx = data.serviceGroups.findIndex(g => g.id === id);
     if (idx === -1) return null;
-    data.serviceGroups[idx] = { ...data.serviceGroups[idx], name, sortOrder };
+    data.serviceGroups[idx] = { ...data.serviceGroups[idx], ...fields };
     saveDB(data);
     return data.serviceGroups[idx];
   },
@@ -89,9 +83,7 @@ const db = {
   },
 
   // PAYMENT METHODS
-  getPaymentMethods() {
-    return loadDB().paymentMethods;
-  },
+  getPaymentMethods() { return loadDB().paymentMethods; },
   createPaymentMethod(name, commission) {
     const data = loadDB();
     const pm = { id: nextId(data, 'paymentMethods'), name, commission: parseFloat(commission) || 0 };
@@ -116,10 +108,7 @@ const db = {
   // SERVICES
   getServices() {
     const data = loadDB();
-    return data.services.map(s => ({
-      ...s,
-      contractors: data.serviceContractors.filter(c => c.serviceId === s.id)
-    }));
+    return data.services.map(s => ({ ...s, contractors: data.serviceContractors.filter(c => c.serviceId === s.id) }));
   },
   getService(id) {
     const data = loadDB();
@@ -131,26 +120,18 @@ const db = {
     const data = loadDB();
     const { internalName, publicName, groupId, margin, description, duration, notes, contractors } = payload;
     const service = {
-      id: nextId(data, 'services'),
-      internalName, publicName,
-      groupId: parseInt(groupId),
-      margin: parseFloat(margin) || 0,
-      description: description || '',
-      duration: duration || '',
-      notes: notes || '',
+      id: nextId(data, 'services'), internalName, publicName,
+      groupId: parseInt(groupId), margin: parseFloat(margin) || 0,
+      description: description || '', duration: duration || '', notes: notes || '',
       createdAt: new Date().toISOString()
     };
     data.services.push(service);
-    // Add contractors
     if (contractors && contractors.length) {
       contractors.forEach(c => {
         data.serviceContractors.push({
-          id: nextId(data, 'serviceContractors'),
-          serviceId: service.id,
-          roleId: c.roleId ? parseInt(c.roleId) : null,
-          roleName: c.roleName || '',
-          paymentType: c.paymentType || 'hourly',
-          hours: parseFloat(c.hours) || 0,
+          id: nextId(data, 'serviceContractors'), serviceId: service.id,
+          roleId: c.roleId ? parseInt(c.roleId) : null, roleName: c.roleName || '',
+          paymentType: c.paymentType || 'hourly', hours: parseFloat(c.hours) || 0,
           fixedAmount: parseFloat(c.fixedAmount) || 0
         });
       });
@@ -164,25 +145,17 @@ const db = {
     if (idx === -1) return null;
     const { internalName, publicName, groupId, margin, description, duration, notes, contractors } = payload;
     data.services[idx] = {
-      ...data.services[idx],
-      internalName, publicName,
-      groupId: parseInt(groupId),
-      margin: parseFloat(margin) || 0,
-      description: description || '',
-      duration: duration || '',
-      notes: notes || ''
+      ...data.services[idx], internalName, publicName,
+      groupId: parseInt(groupId), margin: parseFloat(margin) || 0,
+      description: description || '', duration: duration || '', notes: notes || ''
     };
-    // Replace contractors
     data.serviceContractors = data.serviceContractors.filter(c => c.serviceId !== id);
     if (contractors && contractors.length) {
       contractors.forEach(c => {
         data.serviceContractors.push({
-          id: nextId(data, 'serviceContractors'),
-          serviceId: id,
-          roleId: c.roleId ? parseInt(c.roleId) : null,
-          roleName: c.roleName || '',
-          paymentType: c.paymentType || 'hourly',
-          hours: parseFloat(c.hours) || 0,
+          id: nextId(data, 'serviceContractors'), serviceId: id,
+          roleId: c.roleId ? parseInt(c.roleId) : null, roleName: c.roleName || '',
+          paymentType: c.paymentType || 'hourly', hours: parseFloat(c.hours) || 0,
           fixedAmount: parseFloat(c.fixedAmount) || 0
         });
       });
@@ -200,10 +173,7 @@ const db = {
   // PROPOSALS
   getProposals() {
     const data = loadDB();
-    return data.proposals.map(p => ({
-      ...p,
-      services: data.proposalServices.filter(ps => ps.proposalId === p.id)
-    }));
+    return data.proposals.map(p => ({ ...p, services: data.proposalServices.filter(ps => ps.proposalId === p.id) }));
   },
   getProposal(id) {
     const data = loadDB();
@@ -211,17 +181,14 @@ const db = {
     if (!p) return null;
     const services = data.proposalServices.filter(ps => ps.proposalId === id);
     const roles = data.roles;
-    // Enrich services with contractor details
     const enrichedServices = services.map(ps => {
       const service = data.services.find(s => s.id === ps.serviceId);
-      const contractors = data.serviceContractors
-        .filter(c => c.serviceId === ps.serviceId)
-        .map(c => {
-          const role = c.roleId ? roles.find(r => r.id === c.roleId) : null;
-          const hourlyRate = role ? role.hourlyRate : 0;
-          const cost = c.paymentType === 'hourly' ? c.hours * hourlyRate : c.fixedAmount;
-          return { ...c, roleName: role ? role.name : c.roleName, hourlyRate, cost };
-        });
+      const contractors = data.serviceContractors.filter(c => c.serviceId === ps.serviceId).map(c => {
+        const role = c.roleId ? roles.find(r => r.id === c.roleId) : null;
+        const hourlyRate = role ? role.hourlyRate : 0;
+        const cost = c.paymentType === 'hourly' ? c.hours * hourlyRate : c.fixedAmount;
+        return { ...c, roleName: role ? role.name : c.roleName, hourlyRate, cost };
+      });
       return { ...ps, service, contractors };
     });
     const paymentMethod = p.paymentMethodId ? data.paymentMethods.find(pm => pm.id === p.paymentMethodId) : null;
@@ -231,26 +198,17 @@ const db = {
     const data = loadDB();
     const { name, clientName, serviceIds, paymentMethodId, currency, partnerDiscount, partnerDiscountEnabled, finalDiscount, exchangeRate, status } = payload;
     const proposal = {
-      id: nextId(data, 'proposals'),
-      name: name || clientName || 'New Proposal',
-      clientName: clientName || '',
-      paymentMethodId: paymentMethodId ? parseInt(paymentMethodId) : null,
-      currency: currency || 'EUR',
-      partnerDiscount: parseFloat(partnerDiscount) || 20,
-      partnerDiscountEnabled: !!partnerDiscountEnabled,
-      finalDiscount: parseFloat(finalDiscount) || 0,
-      exchangeRate: parseFloat(exchangeRate) || 1,
-      status: status || 'draft',
+      id: nextId(data, 'proposals'), name: name || clientName || 'New Proposal',
+      clientName: clientName || '', paymentMethodId: paymentMethodId ? parseInt(paymentMethodId) : null,
+      currency: currency || 'EUR', partnerDiscount: parseFloat(partnerDiscount) || 20,
+      partnerDiscountEnabled: !!partnerDiscountEnabled, finalDiscount: parseFloat(finalDiscount) || 0,
+      exchangeRate: parseFloat(exchangeRate) || 1, status: status || 'draft',
       createdAt: new Date().toISOString()
     };
     data.proposals.push(proposal);
     if (serviceIds && serviceIds.length) {
       serviceIds.forEach(sid => {
-        data.proposalServices.push({
-          id: nextId(data, 'proposalServices'),
-          proposalId: proposal.id,
-          serviceId: parseInt(sid)
-        });
+        data.proposalServices.push({ id: nextId(data, 'proposalServices'), proposalId: proposal.id, serviceId: parseInt(sid) });
       });
     }
     saveDB(data);
@@ -262,25 +220,16 @@ const db = {
     if (idx === -1) return null;
     const { name, clientName, serviceIds, paymentMethodId, currency, partnerDiscount, partnerDiscountEnabled, finalDiscount, exchangeRate, status } = payload;
     data.proposals[idx] = {
-      ...data.proposals[idx],
-      name: name || clientName || data.proposals[idx].name,
-      clientName: clientName || '',
-      paymentMethodId: paymentMethodId ? parseInt(paymentMethodId) : null,
-      currency: currency || 'EUR',
-      partnerDiscount: parseFloat(partnerDiscount) || 20,
-      partnerDiscountEnabled: !!partnerDiscountEnabled,
-      finalDiscount: parseFloat(finalDiscount) || 0,
-      exchangeRate: parseFloat(exchangeRate) || 1,
-      status: status || data.proposals[idx].status
+      ...data.proposals[idx], name: name || clientName || data.proposals[idx].name,
+      clientName: clientName || '', paymentMethodId: paymentMethodId ? parseInt(paymentMethodId) : null,
+      currency: currency || 'EUR', partnerDiscount: parseFloat(partnerDiscount) || 20,
+      partnerDiscountEnabled: !!partnerDiscountEnabled, finalDiscount: parseFloat(finalDiscount) || 0,
+      exchangeRate: parseFloat(exchangeRate) || 1, status: status || data.proposals[idx].status
     };
     data.proposalServices = data.proposalServices.filter(ps => ps.proposalId !== id);
     if (serviceIds && serviceIds.length) {
       serviceIds.forEach(sid => {
-        data.proposalServices.push({
-          id: nextId(data, 'proposalServices'),
-          proposalId: id,
-          serviceId: parseInt(sid)
-        });
+        data.proposalServices.push({ id: nextId(data, 'proposalServices'), proposalId: id, serviceId: parseInt(sid) });
       });
     }
     saveDB(data);
@@ -297,33 +246,22 @@ const db = {
     const original = data.proposals.find(p => p.id === id);
     if (!original) return null;
     const originalServices = data.proposalServices.filter(ps => ps.proposalId === id);
-    const newProposal = {
-      ...original,
-      id: nextId(data, 'proposals'),
-      name: original.name + ' (copy)',
-      status: 'draft',
-      createdAt: new Date().toISOString()
-    };
+    const newProposal = { ...original, id: nextId(data, 'proposals'), name: original.name + ' (copy)', status: 'draft', createdAt: new Date().toISOString() };
     data.proposals.push(newProposal);
     originalServices.forEach(ps => {
-      data.proposalServices.push({
-        id: nextId(data, 'proposalServices'),
-        proposalId: newProposal.id,
-        serviceId: ps.serviceId
-      });
+      data.proposalServices.push({ id: nextId(data, 'proposalServices'), proposalId: newProposal.id, serviceId: ps.serviceId });
     });
     saveDB(data);
     return this.getProposal(newProposal.id);
   },
 
-  // INDEXATION - update all hourly rates and fixed amounts by percentage
+  // INDEXATION
   applyIndexation(percent) {
     const data = loadDB();
     const multiplier = 1 + (parseFloat(percent) / 100);
     data.roles = data.roles.map(r => ({ ...r, hourlyRate: Math.round(r.hourlyRate * multiplier * 100) / 100 }));
     data.serviceContractors = data.serviceContractors.map(c => ({
-      ...c,
-      fixedAmount: c.paymentType === 'fixed' ? Math.round(c.fixedAmount * multiplier * 100) / 100 : c.fixedAmount
+      ...c, fixedAmount: c.paymentType === 'fixed' ? Math.round(c.fixedAmount * multiplier * 100) / 100 : c.fixedAmount
     }));
     saveDB(data);
     return { success: true, multiplier };

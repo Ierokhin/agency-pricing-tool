@@ -32,13 +32,13 @@ app.delete('/api/roles/:id', (req, res) => {
 // ─── SERVICE GROUPS ──────────────────────────────────────────────────────────
 app.get('/api/service-groups', (req, res) => res.json(db.getServiceGroups()));
 app.post('/api/service-groups', (req, res) => {
-  const { name, sortOrder } = req.body;
+  const { name, sortOrder, duration } = req.body;
   if (!name) return res.status(400).json({ error: 'Name required' });
-  res.json(db.createServiceGroup(name, sortOrder));
+  res.json(db.createServiceGroup(name, sortOrder, duration));
 });
 app.put('/api/service-groups/:id', (req, res) => {
-  const { name, sortOrder } = req.body;
-  const result = db.updateServiceGroup(parseInt(req.params.id), name, sortOrder);
+  const { name, sortOrder, duration } = req.body;
+  const result = db.updateServiceGroup(parseInt(req.params.id), { name, sortOrder, duration });
   if (!result) return res.status(404).json({ error: 'Not found' });
   res.json(result);
 });
@@ -155,17 +155,39 @@ app.post('/api/indexation', (req, res) => {
 app.get('/api/exchange-rate', async (req, res) => {
   try {
     const https = require('https');
-    https.get('https://api.frankfurter.app/latest?from=EUR&to=USD', (response) => {
-      let data = '';
-      response.on('data', chunk => data += chunk);
-      response.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          res.json({ rate: parsed.rates?.USD || 1.08 });
-        } catch { res.json({ rate: 1.08 }); }
+    const fetchRate = () => new Promise((resolve, reject) => {
+      https.get('https://api.frankfurter.app/latest?from=EUR&to=USD', (response) => {
+        let data = '';
+        response.on('data', chunk => data += chunk);
+        response.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            resolve(parsed.rates?.USD || null);
+          } catch { resolve(null); }
+        });
+      }).on('error', () => resolve(null));
+    });
+    const rate = await fetchRate();
+    if (rate) {
+      res.json({ rate, source: 'frankfurter.app' });
+    } else {
+      // Fallback: try another API
+      const fetchFallback = () => new Promise((resolve) => {
+        https.get('https://open.er-api.com/v6/latest/EUR', (response) => {
+          let data = '';
+          response.on('data', chunk => data += chunk);
+          response.on('end', () => {
+            try {
+              const parsed = JSON.parse(data);
+              resolve(parsed.rates?.USD || null);
+            } catch { resolve(null); }
+          });
+        }).on('error', () => resolve(null));
       });
-    }).on('error', () => res.json({ rate: 1.08 }));
-  } catch { res.json({ rate: 1.08 }); }
+      const fallbackRate = await fetchFallback();
+      res.json({ rate: fallbackRate || 1.12, source: fallbackRate ? 'er-api.com' : 'fallback' });
+    }
+  } catch { res.json({ rate: 1.12, source: 'fallback' }); }
 });
 
 // Serve React frontend build

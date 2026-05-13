@@ -17,16 +17,10 @@ function calcServiceContractorTotal(service, roles) {
 }
 
 // Calculate client price from contractor cost + margin
-// Formula: price = cost / (1 - margin%)
 function calcClientPrice(contractorCost, marginPercent) {
   const margin = marginPercent / 100;
-  if (margin >= 1) return contractorCost * 10; // safety
+  if (margin >= 1) return contractorCost * 10;
   return contractorCost / (1 - margin);
-}
-
-// Apply partner discount
-function applyPartnerDiscount(price, discountPercent) {
-  return price * (1 - discountPercent / 100);
 }
 
 // Round up to nearest 100
@@ -34,7 +28,7 @@ function roundUpTo100(value) {
   return Math.ceil(value / 100) * 100;
 }
 
-// Calculate full proposal pricing
+// NEW LOGIC: partner discount + commission applied per service, then rounded per service
 function calcProposal(proposal, services, roles, paymentMethod) {
   if (!proposal || !services) return null;
 
@@ -48,36 +42,37 @@ function calcProposal(proposal, services, roles, paymentMethod) {
     let clientPrice = calcClientPrice(contractorCost, service.margin);
 
     if (proposal.partnerDiscountEnabled) {
-      clientPrice = applyPartnerDiscount(clientPrice, proposal.partnerDiscount);
+      clientPrice = clientPrice * (1 - proposal.partnerDiscount / 100);
     }
+
+    if (paymentMethod && paymentMethod.commission) {
+      clientPrice = clientPrice * (1 + paymentMethod.commission / 100);
+    }
+
+    // Apply exchange rate before rounding (for USD)
+    const rate = proposal.exchangeRate || 1;
+    const convertedPrice = clientPrice * rate;
+
+    // Round each service up to 100
+    const roundedPrice = roundUpTo100(convertedPrice);
 
     const groupId = service.groupId;
     if (!groups[groupId]) {
-      groups[groupId] = { groupId, services: [], rawTotal: 0 };
+      groups[groupId] = { groupId, services: [], blockTotal: 0 };
     }
     groups[groupId].services.push({
       service,
       contractorCost,
-      clientPrice
+      clientPriceRaw: convertedPrice,
+      clientPrice: roundedPrice
     });
-    groups[groupId].rawTotal += clientPrice;
+    groups[groupId].blockTotal += roundedPrice;
   }
 
-  // Round each block up to 100
-  let subtotal = 0;
-  const blocks = Object.values(groups).map(g => {
-    const blockTotal = roundUpTo100(g.rawTotal);
-    subtotal += blockTotal;
-    return { ...g, blockTotal };
-  });
+  const blocks = Object.values(groups);
+  let subtotal = blocks.reduce((sum, b) => sum + b.blockTotal, 0);
 
-  // Add payment commission
   let total = subtotal;
-  if (paymentMethod && paymentMethod.commission) {
-    total = subtotal * (1 + paymentMethod.commission / 100);
-  }
-
-  // Apply final discount
   let finalTotal = total;
   let discountAmount = 0;
   if (proposal.finalDiscount && proposal.finalDiscount > 0) {
@@ -85,8 +80,6 @@ function calcProposal(proposal, services, roles, paymentMethod) {
     finalTotal = total - discountAmount;
   }
 
-  // Currency conversion
-  const rate = proposal.exchangeRate || 1;
   const currency = proposal.currency || 'EUR';
 
   return {
@@ -96,11 +89,10 @@ function calcProposal(proposal, services, roles, paymentMethod) {
     finalTotal,
     discountAmount,
     currency,
-    rate,
-    // Convert to selected currency
-    subtotalConverted: subtotal * rate,
-    totalConverted: total * rate,
-    finalTotalConverted: finalTotal * rate
+    // Already converted, no need for separate converted fields
+    subtotalConverted: subtotal,
+    totalConverted: total,
+    finalTotalConverted: finalTotal
   };
 }
 

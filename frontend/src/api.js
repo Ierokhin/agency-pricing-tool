@@ -15,32 +15,27 @@ async function req(method, path, body) {
 }
 
 export const api = {
-  // Roles
   getRoles: () => req('GET', '/roles'),
   createRole: (data) => req('POST', '/roles', data),
   updateRole: (id, data) => req('PUT', `/roles/${id}`, data),
   deleteRole: (id) => req('DELETE', `/roles/${id}`),
 
-  // Service Groups
   getServiceGroups: () => req('GET', '/service-groups'),
   createServiceGroup: (data) => req('POST', '/service-groups', data),
   updateServiceGroup: (id, data) => req('PUT', `/service-groups/${id}`, data),
   deleteServiceGroup: (id) => req('DELETE', `/service-groups/${id}`),
 
-  // Payment Methods
   getPaymentMethods: () => req('GET', '/payment-methods'),
   createPaymentMethod: (data) => req('POST', '/payment-methods', data),
   updatePaymentMethod: (id, data) => req('PUT', `/payment-methods/${id}`, data),
   deletePaymentMethod: (id) => req('DELETE', `/payment-methods/${id}`),
 
-  // Services
   getServices: () => req('GET', '/services'),
   getService: (id) => req('GET', `/services/${id}`),
   createService: (data) => req('POST', '/services', data),
   updateService: (id, data) => req('PUT', `/services/${id}`, data),
   deleteService: (id) => req('DELETE', `/services/${id}`),
 
-  // Proposals
   getProposals: () => req('GET', '/proposals'),
   getProposal: (id) => req('GET', `/proposals/${id}`),
   createProposal: (data) => req('POST', '/proposals', data),
@@ -49,13 +44,8 @@ export const api = {
   duplicateProposal: (id) => req('POST', `/proposals/${id}/duplicate`),
   getProposalPricing: (id) => req('GET', `/proposals/${id}/pricing`),
 
-  // Indexation
   applyIndexation: (percent) => req('POST', '/indexation', { percent }),
-
-  // Exchange rate
   getExchangeRate: () => req('GET', '/exchange-rate'),
-
-  // PDF (returns URL, open in new tab)
   getPdfUrl: (id) => `/api/proposals/${id}/pdf`,
 };
 
@@ -82,4 +72,15 @@ export function calcClientPrice(cost, margin) {
 
 export function roundUp100(v) {
   return Math.ceil(v / 100) * 100;
+}
+
+// Full per-service price including partner discount + commission + rounding + currency
+export function calcServiceFinalPrice(service, roles, opts = {}) {
+  const { partnerEnabled = false, partnerDiscount = 20, paymentCommission = 0, exchangeRate = 1 } = opts;
+  const cost = calcServiceCost(service, roles);
+  let price = calcClientPrice(cost, service.margin);
+  if (partnerEnabled) price *= (1 - partnerDiscount / 100);
+  if (paymentCommission) price *= (1 + paymentCommission / 100);
+  price *= exchangeRate;
+  return roundUp100(price);
 }
