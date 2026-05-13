@@ -1,0 +1,178 @@
+{
+  "roles": [
+    {
+      "id": 1,
+      "name": "Creative Director",
+      "hourlyRate": 45,
+      "createdAt": "2026-05-13T07:56:40.823Z"
+    },
+    {
+      "id": 2,
+      "name": "Art Director",
+      "hourlyRate": 35,
+      "createdAt": "2026-05-13T07:56:40.823Z"
+    },
+    {
+      "id": 3,
+      "name": "Designer",
+      "hourlyRate": 25,
+      "createdAt": "2026-05-13T07:56:40.824Z"
+    },
+    {
+      "id": 4,
+      "name": "Copywriter",
+      "hourlyRate": 20,
+      "createdAt": "2026-05-13T07:56:40.824Z"
+    }
+  ],
+  "serviceGroups": [
+    {
+      "id": 1,
+      "name": "Marketing Strategy",
+      "sortOrder": 1
+    },
+    {
+      "id": 2,
+      "name": "Brand Identity",
+      "sortOrder": 2
+    },
+    {
+      "id": 3,
+      "name": "Brand System",
+      "sortOrder": 3
+    },
+    {
+      "id": 4,
+      "name": "Website Blueprint",
+      "sortOrder": 4
+    }
+  ],
+  "services": [
+    {
+      "id": 1,
+      "internalName": "Logo Design",
+      "publicName": "Logo",
+      "groupId": 2,
+      "margin": 60,
+      "description": "New logo development\nSecondary/Alternate logo versions",
+      "duration": "~2 weeks",
+      "notes": "If the project requires paid fonts, their purchase is billed separately.",
+      "createdAt": "2026-05-13T07:56:40.829Z"
+    },
+    {
+      "id": 2,
+      "internalName": "Marketing Strategy Full",
+      "publicName": "Marketing Strategy",
+      "groupId": 1,
+      "margin": 20,
+      "description": "Market review, competitor analysis, target audience research, positioning, 12-month roadmap",
+      "duration": "~6-7 weeks",
+      "notes": "",
+      "createdAt": "2026-05-13T07:56:40.829Z"
+    }
+  ],
+  "serviceContractors": [
+    {
+      "id": 1,
+      "serviceId": 1,
+      "roleId": 1,
+      "roleName": "",
+      "paymentType": "hourly",
+      "hours": 1.4,
+      "fixedAmount": 0
+    },
+    {
+      "id": 2,
+      "serviceId": 1,
+      "roleId": 2,
+      "roleName": "",
+      "paymentType": "hourly",
+      "hours": 6.2,
+      "fixedAmount": 0
+    },
+    {
+      "id": 3,
+      "serviceId": 1,
+      "roleId": 3,
+      "roleName": "",
+      "paymentType": "hourly",
+      "hours": 11.4,
+      "fixedAmount": 0
+    },
+    {
+      "id": 4,
+      "serviceId": 1,
+      "roleId": 4,
+      "roleName": "",
+      "paymentType": "hourly",
+      "hours": 0.6,
+      "fixedAmount": 0
+    },
+    {
+      "id": 7,
+      "serviceId": 2,
+      "roleId": 1,
+      "roleName": "",
+      "paymentType": "hourly",
+      "hours": 20,
+      "fixedAmount": 0
+    },
+    {
+      "id": 8,
+      "serviceId": 2,
+      "roleId": 2,
+      "roleName": "",
+      "paymentType": "hourly",
+      "hours": 40,
+      "fixedAmount": 0
+    }
+  ],
+  "paymentMethods": [
+    {
+      "id": 1,
+      "name": "Bank Transfer",
+      "commission": 0
+    },
+    {
+      "id": 2,
+      "name": "Stripe / Card",
+      "commission": 3
+    }
+  ],
+  "proposals": [
+    {
+      "id": 1,
+      "name": "Test KP",
+      "clientName": "No Limit",
+      "paymentMethodId": 1,
+      "currency": "EUR",
+      "partnerDiscount": 20,
+      "partnerDiscountEnabled": false,
+      "finalDiscount": 0,
+      "exchangeRate": 1,
+      "status": "draft",
+      "createdAt": "2026-05-13T07:56:59.389Z"
+    }
+  ],
+  "proposalServices": [
+    {
+      "id": 1,
+      "proposalId": 1,
+      "serviceId": 1
+    },
+    {
+      "id": 2,
+      "proposalId": 1,
+      "serviceId": 2
+    }
+  ],
+  "_counters": {
+    "roles": 4,
+    "serviceGroups": 4,
+    "services": 2,
+    "serviceContractors": 8,
+    "paymentMethods": 2,
+    "proposals": 1,
+    "proposalServices": 2
+  }
+}

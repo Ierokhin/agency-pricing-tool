@@ -1,0 +1,14 @@
+{
+  "name": "agency-pricing-backend",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.3",
+    "pdfkit": "^0.18.0"
+  }
+}
