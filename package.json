@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "description": "Brandon Archibald Agency Pricing Tool",
   "scripts": {
-    "build": "cd frontend && npm install && npm run build",
-    "start": "cd backend && npm install && node server.js",
-    "postinstall": "cd backend && npm install && cd ../frontend && npm install && npm run build"
+    "postinstall": "cd backend && npm install && cd ../frontend && npm install && npm run build",
+    "start": "node backend/server.js"
   },
   "engines": {
     "node": ">=20"
